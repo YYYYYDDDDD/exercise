@@ -1,6 +1,7 @@
 package tools;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
@@ -18,7 +19,7 @@ import java.util.Set;
  * Copyright: (c)2018 AIR Times Inc. All rights reserved.
  * @version: 1.0
  */
-public class AirBeanUtils {
+public class BeanUtils {
 
     /**
      * 类拷贝
@@ -114,6 +115,12 @@ public class AirBeanUtils {
             }
             return;
         }
+        //赋值父类型
+        try {
+            assignSuperClass(sour, targ, sClass, tClass);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 
         Field[] fields = sClass.getDeclaredFields();
@@ -124,125 +131,189 @@ public class AirBeanUtils {
         for (Field field : fields) {
             //获得源字段类型
             Class<?> fieldType = field.getType();
-            //获取源字段名
-            String fieldName = field.getName();
 
-            //定义赋值体的字段类型
-            Field tfield = null;
             try {
-                //根据名称去赋值类找
-                tfield = tClass.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                //没找到 如果右面是 xxxBO换成xxxVO再找
-                String stamp = fieldName.replace("BO", "VO");
-                if (fieldName.equals(stamp)) {
-                    fieldName = fieldName.replace("VO", "BO");
-                } else {
-                    fieldName = stamp;
-                }
-                try {
-                    tfield = tClass.getDeclaredField(fieldName);
-                } catch (NoSuchFieldException e1) {
-                    //这里已经保证目标字段不是空
-                    continue;
-                }
-            }
-            //获得对应的getter/setter方法
-            try {
-                Method setter = tClass.getMethod("set" + initialUp(tfield.getName()), tfield.getType());
-                Method getter = sClass.getMethod("get" + initialUp(field.getName()));
-                //对比赋值源跟赋值体对应两个字段类型，如果两个类型不一致
-                if (!field.getType().equals(tfield.getType())) {
-                    //如果类型不一样判断是不是对本类型对应的包装类型
-                    if (typeEquals(field.getType(), tfield.getType())) {
-                        setter.invoke(targ, getter.invoke(sour, null));
-                    } else {
-                        //如果类型不同，并且类型还都不是基本类型跟包装类
-                        if (!isPrimitive(tfield.getType()) && !isPackclass(tfield.getType()) && !isPrimitive(field.getType()) && !isPackclass(field.getType())) {
-                            //是同类
-                            Object to = tfield.getType().newInstance();
-                            Object so = getter.invoke(sour, null);
-                            //深复制
-                            copyObject(so, to);
-                            //赋值
-                            setter.invoke(targ, to);
-                        }
-                    }
-                } else {
-                    //判断是不是基本类型
-                    if (isPrimitive(field.getType()) || isPackclass(field.getType())) {
-                        Object value = (Object) getter.invoke(sour, null);
-                        if (value != null) {
-                            //执行赋值
-                            setter.invoke(targ, value);
-                        }
-                    } else {
-                        if (isCollection(fieldType)) {
-                            //赋值体对应字段是null或者不是集合，退出
-                            if (tfield == null || !isCollection(tfield.getType())) {
-                                continue;
-                            }
-                            //获取被赋值字段集合的泛型
-                            Class tGenericity = (Class) ((ParameterizedType) tfield.getGenericType()).getActualTypeArguments()[0];
-                            //获取赋值源字段集合的值
-                            Collection sColl = (Collection) getter.invoke(sour, null);
-                            //如果集合为null，如果是一个null Collection，也赋值
-                            if (sColl == null) {
-                                continue;
-                            }
-                            //通过赋值体对应字段创建一个集合
-                            Collection tColl = (Collection) sColl.getClass().newInstance();
-                            Iterator iterator = sColl.iterator();
-                            if (iterator != null) {
-                                while (iterator.hasNext()) {
-                                    Object to = getValue(tGenericity, iterator.next());
-                                    tColl.add(to);
-                                }
-                            }
-                            setter.invoke(targ, tColl);
-
-                        } else if (isMap(fieldType)) {
-                            //如果是map
-                            //获取赋值源字段集合的值
-                            Map cMap = (Map) getter.invoke(sour, null);
-                            if(cMap==null){
-                                continue;
-                            }
-                            //获取被赋值字段集合的泛型
-                            //K
-                            Class keyGenericity = (Class) ((ParameterizedType) tfield.getGenericType()).getActualTypeArguments()[0];
-                            //V
-                            Class valueGenericity = (Class) ((ParameterizedType) tfield.getGenericType()).getActualTypeArguments()[1];
-
-                            //构建赋值体Map
-                            Map tMap = (Map) cMap.getClass().newInstance();
-
-                            //遍历Map
-                            for (Map.Entry en : (Set<Map.Entry>) cMap.entrySet()) {
-
-                                Object tko = getValue(keyGenericity, en.getKey());
-                                Object tvo = getValue(valueGenericity, en.getValue());
-
-                                tMap.put(tko, tvo);
-                            }
-
-                            setter.invoke(targ, tMap);
-                        } else {
-                            //是同类
-                            Object to = tfield.getType().newInstance();
-                            Object so = getter.invoke(sour, null);
-                            //深复制
-                            copyObject(so, to);
-                            //赋值
-                            setter.invoke(targ, to);
-                        }
-                    }
-                }
+                //定义赋值体的字段类型
+                Field tfield = getField(tClass, field.getName());
+                //给字段赋值
+                assignField(sour, targ, sClass, tClass, field, tfield);
             } catch (Exception e) {
-                e.printStackTrace();
                 continue;
             }
+
+
         }
+
+    }
+
+    private static void assignField(Object sour, Object targ, Class sClass, Class tClass, Field sfield, Field tfield) throws NoSuchMethodException, IllegalAccessException, InstantiationException,
+        InvocationTargetException {
+        Method setter = tClass.getMethod("set" + initialUp(tfield.getName()), tfield.getType());
+        Method getter = sClass.getMethod("get" + initialUp(sfield.getName()));
+        //对比赋值源跟赋值体对应两个字段类型，如果两个类型不一致
+        if (!sfield.getType().equals(tfield.getType())) {
+            //如果类型不一样判断是不是对本类型对应的包装类型
+            if (typeEquals(sfield.getType(), tfield.getType())) {
+                setter.invoke(targ, getter.invoke(sour, null));
+            } else {
+                //如果类型不同，并且类型还都不是基本类型跟包装类
+                if (!isPrimitive(tfield.getType()) && !isPackclass(tfield.getType()) && !isPrimitive(sfield.getType()) && !isPackclass(sfield.getType())) {
+                    //是同类
+                    Object to = tfield.getType().newInstance();
+                    Object so = getter.invoke(sour, null);
+                    //深复制
+                    copyObject(so, to);
+                    //赋值
+                    setter.invoke(targ, to);
+                }
+            }
+        } else {
+            //判断是不是基本类型
+            if (isPrimitive(sfield.getType()) || isPackclass(sfield.getType())) {
+                Object value = (Object) getter.invoke(sour, null);
+                if (value != null) {
+                    //执行赋值
+                    setter.invoke(targ, value);
+                }
+            } else {
+                if (isCollection(sfield.getType())) {
+                    //赋值体对应字段是null或者不是集合，退出
+                    if (tfield == null || !isCollection(tfield.getType())) {
+                        return;
+                    }
+                    //获取被赋值字段集合的泛型
+                    Class tGenericity = (Class) ((ParameterizedType) tfield.getGenericType()).getActualTypeArguments()[0];
+                    //获取赋值源字段集合的值
+                    Collection sColl = (Collection) getter.invoke(sour, null);
+                    //如果集合为null，如果是一个null Collection，也赋值
+                    if (sColl == null) {
+                        return;
+                    }
+                    //通过赋值体对应字段创建一个集合
+                    Collection tColl = (Collection) sColl.getClass().newInstance();
+                    Iterator iterator = sColl.iterator();
+                    if (iterator != null) {
+                        while (iterator.hasNext()) {
+                            Object to = getValue(tGenericity, iterator.next());
+                            tColl.add(to);
+                        }
+                    }
+                    setter.invoke(targ, tColl);
+
+                } else if (isMap(sfield.getType())) {
+                    //如果是map
+                    //获取赋值源字段集合的值
+                    Map cMap = (Map) getter.invoke(sour, null);
+                    if (cMap == null) {
+                        return;
+                    }
+                    //获取被赋值字段集合的泛型
+                    //K
+                    Class keyGenericity = (Class) ((ParameterizedType) tfield.getGenericType()).getActualTypeArguments()[0];
+                    //V
+                    Class valueGenericity = (Class) ((ParameterizedType) tfield.getGenericType()).getActualTypeArguments()[1];
+
+                    //构建赋值体Map
+                    Map tMap = (Map) cMap.getClass().newInstance();
+
+                    //遍历Map
+                    for (Map.Entry en : (Set<Map.Entry>) cMap.entrySet()) {
+
+                        Object tko = getValue(keyGenericity, en.getKey());
+                        Object tvo = getValue(valueGenericity, en.getValue());
+
+                        tMap.put(tko, tvo);
+                    }
+
+                    setter.invoke(targ, tMap);
+                } else {
+                    //是同类
+                    Object to = tfield.getType().newInstance();
+                    Object so = getter.invoke(sour, null);
+                    //深复制
+                    copyObject(so, to);
+                    //赋值
+                    setter.invoke(targ, to);
+                }
+            }
+        }
+    }
+
+    /**
+     * 根据class获取对应的字段
+     *
+     * @param tClass
+     * @param fieldName
+     * @return
+     * @throws NoSuchFieldException
+     */
+    private static Field getField(Class<?> tClass, String fieldName) throws NoSuchFieldException {
+        Field file = null;
+        try {
+            //根据名称去赋值类找
+            file = tClass.getDeclaredField(fieldName);
+        } catch (NoSuchFieldException e) {
+            //没找到 如果右面是 xxxBO换成xxxVO再找
+            String stamp = fieldName.replace("BO", "VO");
+            if (fieldName.equals(stamp)) {
+                fieldName = fieldName.replace("VO", "BO");
+            } else {
+                fieldName = stamp;
+            }
+            try {
+                file = tClass.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e1) {
+                throw e1;
+            }
+        }
+        return file;
+    }
+
+    private static final String OBJECT_STR = "java.lang.Object";
+
+    /**
+     * 为付类型赋值
+     *
+     * @param sour
+     * @param targ
+     * @param sClass
+     * @param tClass
+     */
+    private static void assignSuperClass(Object sour, Object targ, Class sClass, Class tClass) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
+        //Source Super Class
+        Class ssc = sClass.getSuperclass();
+        //如果赋值源付类型是空或者是Object，返回
+        if (ssc == null || OBJECT_STR.equals(ssc.getName())) {
+            return;
+        }
+
+        //targer Super Class
+        Class tsc = tClass.getSuperclass();
+        //如果赋值体付类型是空或者是Object，返回
+        if (tsc == null || OBJECT_STR.equals(tsc.getName())) {
+            return;
+        }
+
+        Field[] sfields = ssc.getDeclaredFields();
+
+        if (sfields == null && sfields.length == 0) {
+            return;
+        }
+        for (Field field : sfields) {
+            try {
+                //获得对象字段反射
+                Field tfield = getField(tsc, field.getName());
+                //对字段赋值
+                assignField(sour, targ, sClass, tClass, field, tfield);
+            } catch (NoSuchFieldException e) {
+                continue;
+            }
+
+
+        }
+
+        //判断还有没有超类,如果有递归赋值
+        assignSuperClass(sour, targ, ssc, tsc);
 
     }
 
@@ -354,7 +425,7 @@ public class AirBeanUtils {
      */
     private static boolean isPrimitive(Class aclass) {
         String[] types = {"int", "double", "long", "short", "byte", "boolean", "char", "float"};
-        String typeName = aclass.getName();
+        String typeName = aclass.getTypeName();
         for (String type : types) {
             if (typeName.equals(type)) {
                 return true;
