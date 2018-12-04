@@ -1,5 +1,6 @@
 package tools;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -14,14 +15,37 @@ import java.util.Map;
  * Copyright: (c)2018 AIR Times Inc. All rights reserved.
  * @version: 1.0
  */
-public class DogVO {
+public class DogVO extends AnimalVO {
     private Integer id;
 
-    private List<EquipVO> equipS;
     private EquipVO equip;
+
+    private List<EquipVO> equipVOS;
+
     private List<Integer> list;
 
     private Map<String, EquipVO> equipVOMap;
+    
+    private Map<String, List<EquipVO>> equipVOListMap;
+
+    private Map<String, List<Map<String,EquipVO>>> equipVOListMapMap;
+    private Date addtime;
+
+    public Date getAddtime() {
+        return addtime;
+    }
+
+    public void setAddtime(Date addtime) {
+        this.addtime = addtime;
+    }
+
+    public EquipVO getEquip() {
+        return equip;
+    }
+
+    public void setEquip(EquipVO equip) {
+        this.equip = equip;
+    }
 
     public DogVO() {
         super();
@@ -32,7 +56,7 @@ public class DogVO {
         this.id = id;
     }
 
-    public Integer getId() {
+    public int getId() {
         return id;
     }
 
@@ -40,20 +64,12 @@ public class DogVO {
         this.id = id;
     }
 
-    public List<EquipVO> getEquipS() {
-        return equipS;
+    public List<EquipVO> getEquipVOS() {
+        return equipVOS;
     }
 
-    public void setEquipS(List<EquipVO> equipS) {
-        this.equipS = equipS;
-    }
-
-    public EquipVO getEquip() {
-        return equip;
-    }
-
-    public void setEquip(EquipVO equip) {
-        this.equip = equip;
+    public void setEquipVOS(List<EquipVO> equipVOS) {
+        this.equipVOS = equipVOS;
     }
 
     public List<Integer> getList() {
@@ -71,4 +87,28 @@ public class DogVO {
     public void setEquipVOMap(Map<String, EquipVO> equipVOMap) {
         this.equipVOMap = equipVOMap;
     }
+
+	public Map<String, List<EquipVO>> getEquipVOListMap() {
+		return equipVOListMap;
+	}
+
+	public void setEquipVOListMap(Map<String, List<EquipVO>> equipVOListMap) {
+		this.equipVOListMap = equipVOListMap;
+	}
+
+
+	@Override
+	public String toString() {
+		return "DogVO [id=" + id + ", equip=" + equip + ", equipVOS=" + equipVOS + ", list=" + list + ", equipVOMap="
+				+ equipVOMap + ", equipVOListMap=" + equipVOListMap + ", equipVOListMapMap=" + equipVOListMapMap + "]";
+	}
+
+	public Map<String, List<Map<String, EquipVO>>> getEquipVOListMapMap() {
+		return equipVOListMapMap;
+	}
+
+	public void setEquipVOListMapMap(Map<String, List<Map<String, EquipVO>>> equipVOListMapMap) {
+		this.equipVOListMapMap = equipVOListMapMap;
+	}
+
 }

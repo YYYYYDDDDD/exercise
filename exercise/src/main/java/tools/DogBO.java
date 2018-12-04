@@ -1,5 +1,6 @@
 package tools;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -14,14 +15,41 @@ import java.util.Map;
  * Copyright: (c)2018 AIR Times Inc. All rights reserved.
  * @version: 1.0
  */
-public class DogBO {
+public class DogBO extends AnimalBO {
     private Integer id;
-
-    private List<EquipBO> equipS;
     private EquipBO equip;
+    private List<EquipBO> equipBOS;
+
     private List<Integer> list;
+    private Date addtime;
 
     private Map<String, EquipBO> equipBOMap;
+    private Map<String, List<EquipBO>> equipBOListMap;
+    private Map<String, List<Map<String,EquipBO>>> equipBOListMapMap;
+
+	public Map<String, List<EquipBO>> getEquipBOListMap() {
+		return equipBOListMap;
+	}
+
+    public Date getAddtime() {
+        return addtime;
+    }
+
+    public void setAddtime(Date addtime) {
+        this.addtime = addtime;
+    }
+
+    public void setEquipBOListMap(Map<String, List<EquipBO>> equipBOListMap) {
+		this.equipBOListMap = equipBOListMap;
+	}
+
+	public EquipBO getEquip() {
+        return equip;
+    }
+
+    public void setEquip(EquipBO equip) {
+        this.equip = equip;
+    }
 
     public DogBO() {
         super();
@@ -40,20 +68,12 @@ public class DogBO {
         this.id = id;
     }
 
-    public List<EquipBO> getEquipS() {
-        return equipS;
+    public List<EquipBO> getEquipBOS() {
+        return equipBOS;
     }
 
-    public void setEquipS(List<EquipBO> equipS) {
-        this.equipS = equipS;
-    }
-
-    public EquipBO getEquip() {
-        return equip;
-    }
-
-    public void setEquip(EquipBO equip) {
-        this.equip = equip;
+    public void setEquipBOS(List<EquipBO> equipBOS) {
+        this.equipBOS = equipBOS;
     }
 
     public List<Integer> getList() {
@@ -71,4 +91,20 @@ public class DogBO {
     public void setEquipBOMap(Map<String, EquipBO> equipBOMap) {
         this.equipBOMap = equipBOMap;
     }
+
+	public Map<String, List<Map<String, EquipBO>>> getEquipBOListMapMap() {
+		return equipBOListMapMap;
+	}
+
+	public void setEquipBOListMapMap(Map<String, List<Map<String, EquipBO>>> equipBOListMapMap) {
+		this.equipBOListMapMap = equipBOListMapMap;
+	}
+
+	@Override
+	public String toString() {
+		return "DogBO [id=" + id + ", equip=" + equip + ", equipBOS=" + equipBOS + ", list=" + list + ", equipBOMap="
+				+ equipBOMap + ", equipBOListMap=" + equipBOListMap + ", equipBOListMapMap=" + equipBOListMapMap + "]";
+	}
+
+    
 }
